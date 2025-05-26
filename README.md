@@ -144,3 +144,178 @@ Docker volume persists data using `postgres_data`.
 | `/documents/upload` | POST   | Upload document (JWT required) |
 | `/qa/`              | POST   | Ask question (JWT required)    |
 | `/auth/test-token`  | GET    | Test JWT token validity        |
+
+# Fullstack RAG Application
+
+A modern fullstack application that implements a RAG (Retrieval-Augmented Generation) system for document processing and question answering.
+
+## Features
+
+- Document processing and embedding generation
+- Question answering using RAG
+- User authentication and authorization
+- API documentation with Swagger/OpenAPI
+- Comprehensive test suite
+- Database migrations with Alembic
+- Logging and error handling
+
+## Prerequisites
+
+- Python 3.8+
+- Node.js 16+
+- PostgreSQL 13+
+- Docker and Docker Compose (for containerized deployment)
+
+## Installation
+
+### Backend Setup
+
+1. Clone the repository:
+```bash
+git clone https://github.com/yourusername/fullstack-rag-app.git
+cd fullstack-rag-app
+```
+
+2. Create and activate a virtual environment:
+```bash
+python -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+```
+
+3. Install dependencies:
+```bash
+pip install -r requirements.txt
+```
+
+4. Set up environment variables:
+```bash
+cp .env.example .env
+# Edit .env with your configuration
+```
+
+5. Run database migrations:
+```bash
+python backend/scripts/run_migrations.py
+```
+
+### Frontend Setup
+
+1. Navigate to the frontend directory:
+```bash
+cd frontend
+```
+
+2. Install dependencies:
+```bash
+npm install
+```
+
+3. Create environment file:
+```bash
+cp .env.example .env
+# Edit .env with your configuration
+```
+
+4. Start development server:
+```bash
+npm start
+```
+
+## Development
+
+### Backend Development
+
+1. Start the development server:
+```bash
+uvicorn backend.main:app --reload
+```
+
+2. Run tests:
+```bash
+pytest
+```
+
+3. Generate new database migrations:
+```bash
+alembic revision --autogenerate -m "description of changes"
+```
+
+### Frontend Development
+
+1. Start the development server:
+```bash
+cd frontend
+npm start
+```
+
+2. Run tests:
+```bash
+npm test
+```
+
+3. Build for production:
+```bash
+npm run build
+```
+
+## API Documentation
+
+Once the server is running, you can access:
+- Swagger UI: http://localhost:8000/docs
+- ReDoc: http://localhost:8000/redoc
+
+## Docker Deployment
+
+1. Build and start the containers:
+```bash
+docker-compose up --build
+```
+
+2. Run migrations in the container:
+```bash
+docker-compose exec backend python scripts/run_migrations.py
+```
+
+3. Access the application:
+- Frontend: http://localhost:3000
+- Backend API: http://localhost:8000
+- API Documentation: http://localhost:8000/docs
+
+## Project Structure
+
+```
+backend/
+├── alembic/              # Database migrations
+├── api/                  # API routes and endpoints
+├── core/                 # Core functionality
+├── db/                   # Database models and session
+├── services/            # Business logic services
+├── tests/               # Test suite
+└── scripts/             # Utility scripts
+
+frontend/
+├── src/                 # Source code
+├── public/             # Static files
+├── tests/              # Test files
+└── package.json        # Dependencies and scripts
+```
+
+## Vector Store
+
+The application uses FAISS for vector storage:
+- Embeddings are generated using OpenAI's embedding model
+- Vectors are stored in FAISS index
+- Index is persisted to disk and loaded on startup
+- Vector similarity search is used for document retrieval
+
+## Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Commit your changes
+4. Push to the branch
+5. Create a Pull Request
+
+## License
+
+This project is licensed under the MIT License - see the LICENSE file for details.

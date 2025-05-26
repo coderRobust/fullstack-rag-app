@@ -1,18 +1,33 @@
-fastapi==0.110.0
-uvicorn[standard]==0.29.0
-sqlalchemy==2.0.29
-asyncpg==0.29.0
-passlib[bcrypt]==1.7.4
-python-jose==3.3.0
-pydantic==1.10.13
-python-multipart==0.0.9
-langchain==0.2.16
-langchain-openai==0.1.20
-langchain-core==0.2.38
-openai==1.37.1
-httpx==0.27.2
-pypdf==5.5.0
-tqdm==4.67.1
-langchain-community
-faiss-cpu
-langchain-openai
+# API Framework
+fastapi>=0.68.0
+uvicorn>=0.15.0
+python-multipart>=0.0.5
+python-jose[cryptography]>=3.3.0
+passlib[bcrypt]>=1.7.4
+pydantic>=1.8.2
+pydantic-settings>=2.0.0
+
+# Database
+sqlalchemy>=1.4.23
+alembic>=1.7.1
+asyncpg>=0.24.0
+aiosqlite>=0.17.0
+
+# RAG and AI
+langchain>=0.0.200
+openai>=0.27.0
+faiss-cpu>=1.7.0
+tiktoken>=0.3.0
+
+# Testing
+pytest>=7.0.0
+pytest-asyncio>=0.18.0
+pytest-cov>=3.0.0
+httpx>=0.23.0
+pytest-mock>=3.10.0
+
+# Development
+black>=21.7b0
+isort>=5.9.3
+flake8>=3.9.2
+mypy>=0.910

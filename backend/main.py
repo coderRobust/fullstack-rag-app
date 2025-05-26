@@ -7,20 +7,23 @@ Initializes the database and loads middleware.
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.openapi.utils import get_openapi
-from routers import auth, documents, qa
-from db.init_db import init_db
+from core.config import get_settings
+from api.v1 import auth, documents, qa
+from db.session import init_db
 from middleware.auth_middleware import AuthMiddleware
 
+settings = get_settings()
+
 app = FastAPI(
-    title="RAG Document Management and Q&A System",
+    title=settings.PROJECT_NAME,
     version="1.0.0",
     description="Upload documents, index them using embeddings, and ask questions via RAG pipeline"
 )
 
-# CORS config (allow frontend dev)
+# CORS config
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # restrict to frontend URL in production
+    allow_origins=settings.BACKEND_CORS_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -29,23 +32,20 @@ app.add_middleware(
 # Custom JWT authentication middleware
 app.add_middleware(AuthMiddleware)
 
-# Routers
-app.include_router(auth.router, prefix="/auth", tags=["Auth"])
-app.include_router(documents.router, prefix="/documents", tags=["Documents"])
-app.include_router(qa.router, prefix="/qa", tags=["Q&A"])
-
+# API routers
+app.include_router(auth.router, prefix=settings.API_V1_STR + "/auth", tags=["Auth"])
+app.include_router(documents.router, prefix=settings.API_V1_STR + "/documents", tags=["Documents"])
+app.include_router(qa.router, prefix=settings.API_V1_STR + "/qa", tags=["Q&A"])
 
 @app.on_event("startup")
 async def on_startup():
     """Run DB setup logic and startup tasks"""
     await init_db()
 
-
 @app.get("/", tags=["Health Check"])
 async def root():
     """Health check endpoint"""
-    return {"message": "RAG Q&A backend is running."}
-
+    return {"message": f"{settings.PROJECT_NAME} is running."}
 
 # ✅ Inject BearerAuth into Swagger docs
 def custom_openapi():
@@ -75,6 +75,5 @@ def custom_openapi():
 
     app.openapi_schema = openapi_schema
     return app.openapi_schema
-
 
 app.openapi = custom_openapi
