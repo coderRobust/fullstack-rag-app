@@ -147,28 +147,67 @@ Docker volume persists data using `postgres_data`.
 
 # Fullstack RAG Application
 
-A modern fullstack application that implements a RAG (Retrieval-Augmented Generation) system for document processing and question answering.
+A fullstack application that implements Retrieval-Augmented Generation (RAG) for document processing and question answering.
+
+## Tech Stack
+
+### Backend
+- FastAPI
+- PostgreSQL
+- SQLAlchemy
+- LangChain
+- OpenAI
+- FAISS
+- Alembic
+- Pytest
+
+### Frontend
+- React
+- TypeScript
+- Vite
+- React Router
+- Axios
+- TailwindCSS
 
 ## Features
 
 - Document processing and embedding generation
-- Question answering using RAG
-- User authentication and authorization
-- API documentation with Swagger/OpenAPI
-- Comprehensive test suite
-- Database migrations with Alembic
-- Logging and error handling
+- Vector similarity search
+- Question answering with context
+- Document summarization
+- User authentication
+- Secure API endpoints
+- Modern UI/UX
 
 ## Prerequisites
 
-- Python 3.8+
-- Node.js 16+
-- PostgreSQL 13+
-- Docker and Docker Compose (for containerized deployment)
+- Python 3.9+
+- Node.js 18+
+- Docker and Docker Compose
+- OpenAI API key
 
-## Installation
+## Environment Variables
 
-### Backend Setup
+Create `.env` files in both `backend` and `frontend` directories:
+
+### Backend (.env)
+```env
+DATABASE_URL=postgresql+asyncpg://postgres:postgres@localhost:5432/rag_db
+OPENAI_API_KEY=your_openai_api_key
+EMBEDDING_MODEL=text-embedding-ada-002
+LLM_MODEL=gpt-3.5-turbo
+JWT_SECRET=your_jwt_secret
+JWT_ALGORITHM=HS256
+ACCESS_TOKEN_EXPIRE_MINUTES=30
+```
+
+### Frontend (.env)
+```env
+VITE_API_URL=http://localhost:8000
+VITE_APP_TITLE=RAG Application
+```
+
+## Setup and Installation
 
 1. Clone the repository:
 ```bash
@@ -176,137 +215,106 @@ git clone https://github.com/yourusername/fullstack-rag-app.git
 cd fullstack-rag-app
 ```
 
-2. Create and activate a virtual environment:
+2. Start the backend:
 ```bash
+cd backend
 python -m venv venv
 source venv/bin/activate  # On Windows: venv\Scripts\activate
-```
-
-3. Install dependencies:
-```bash
 pip install -r requirements.txt
+alembic upgrade head
+uvicorn main:app --reload
 ```
 
-4. Set up environment variables:
-```bash
-cp .env.example .env
-# Edit .env with your configuration
-```
-
-5. Run database migrations:
-```bash
-python backend/scripts/run_migrations.py
-```
-
-### Frontend Setup
-
-1. Navigate to the frontend directory:
+3. Start the frontend:
 ```bash
 cd frontend
-```
-
-2. Install dependencies:
-```bash
 npm install
+npm run dev
 ```
 
-3. Create environment file:
+4. Run tests:
 ```bash
-cp .env.example .env
-# Edit .env with your configuration
-```
-
-4. Start development server:
-```bash
-npm start
-```
-
-## Development
-
-### Backend Development
-
-1. Start the development server:
-```bash
-uvicorn backend.main:app --reload
-```
-
-2. Run tests:
-```bash
+# Backend tests
+cd backend
 pytest
-```
 
-3. Generate new database migrations:
-```bash
-alembic revision --autogenerate -m "description of changes"
-```
-
-### Frontend Development
-
-1. Start the development server:
-```bash
+# Frontend tests
 cd frontend
-npm start
-```
-
-2. Run tests:
-```bash
 npm test
 ```
 
-3. Build for production:
-```bash
-npm run build
-```
-
-## API Documentation
-
-Once the server is running, you can access:
-- Swagger UI: http://localhost:8000/docs
-- ReDoc: http://localhost:8000/redoc
-
-## Docker Deployment
+## Docker Setup
 
 1. Build and start the containers:
 ```bash
 docker-compose up --build
 ```
 
-2. Run migrations in the container:
+2. Run migrations:
 ```bash
-docker-compose exec backend python scripts/run_migrations.py
+docker-compose exec backend alembic upgrade head
 ```
 
-3. Access the application:
-- Frontend: http://localhost:3000
-- Backend API: http://localhost:8000
-- API Documentation: http://localhost:8000/docs
+## API Documentation
+
+Once the backend is running, visit:
+- Swagger UI: http://localhost:8000/docs
+- ReDoc: http://localhost:8000/redoc
 
 ## Project Structure
 
 ```
-backend/
-├── alembic/              # Database migrations
-├── api/                  # API routes and endpoints
-├── core/                 # Core functionality
-├── db/                   # Database models and session
-├── services/            # Business logic services
-├── tests/               # Test suite
-└── scripts/             # Utility scripts
-
-frontend/
-├── src/                 # Source code
-├── public/             # Static files
-├── tests/              # Test files
-└── package.json        # Dependencies and scripts
+fullstack-rag-app/
+├── backend/
+│   ├── alembic/
+│   ├── api/
+│   │   └── v1/
+│   ├── core/
+│   ├── db/
+│   │   ├── models/
+│   │   └── repositories/
+│   ├── services/
+│   └── tests/
+├── frontend/
+│   ├── src/
+│   │   ├── components/
+│   │   ├── hooks/
+│   │   ├── services/
+│   │   └── types/
+│   └── tests/
+└── docker-compose.yml
 ```
 
-## Vector Store
+## Development
 
-The application uses FAISS for vector storage:
-- Embeddings are generated using OpenAI's embedding model
-- Vectors are stored in FAISS index
-- Index is persisted to disk and loaded on startup
-- Vector similarity search is used for document retrieval
+### Backend Development
+- Follow PEP 8 style guide
+- Write tests for new features
+- Update API documentation
+- Use type hints
+- Handle errors properly
+
+### Frontend Development
+- Follow TypeScript best practices
+- Write component tests
+- Use proper state management
+- Follow React best practices
+- Implement proper error handling
+
+## Deployment
+
+1. Build the frontend:
+```bash
+cd frontend
+npm run build
+```
+
+2. Set up production environment variables
+
+3. Deploy using Docker:
+```bash
+docker-compose -f docker-compose.prod.yml up -d
+```
 
 ## Contributing
 
@@ -318,4 +326,4 @@ The application uses FAISS for vector storage:
 
 ## License
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+MIT

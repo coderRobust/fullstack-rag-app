@@ -14,45 +14,45 @@ settings = get_settings()
 log_dir = Path("logs")
 log_dir.mkdir(exist_ok=True)
 
-# Log format
-log_format = logging.Formatter(
-    "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-)
+# Configure logging
+def setup_logging():
+    # Create formatters
+    file_formatter = logging.Formatter(
+        '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    )
+    console_formatter = logging.Formatter(
+        '%(levelname)s - %(message)s'
+    )
 
-def setup_logger(name: str) -> logging.Logger:
-    """
-    Set up a logger with console and file handlers.
-    
-    Args:
-        name: The name of the logger
-        
-    Returns:
-        logging.Logger: Configured logger instance
-    """
-    logger = logging.getLogger(name)
-    logger.setLevel(logging.INFO)
-    
-    # Console handler
-    console_handler = logging.StreamHandler(sys.stdout)
-    console_handler.setFormatter(log_format)
-    logger.addHandler(console_handler)
-    
-    # File handler
+    # Create handlers
     file_handler = RotatingFileHandler(
-        log_dir / f"{name}.log",
-        maxBytes=10 * 1024 * 1024,  # 10MB
+        log_dir / "app.log",
+        maxBytes=10485760,  # 10MB
         backupCount=5
     )
-    file_handler.setFormatter(log_format)
-    logger.addHandler(file_handler)
-    
-    return logger
+    file_handler.setFormatter(file_formatter)
+
+    console_handler = logging.StreamHandler(sys.stdout)
+    console_handler.setFormatter(console_formatter)
+
+    # Configure root logger
+    root_logger = logging.getLogger()
+    root_logger.setLevel(logging.INFO)
+    root_logger.addHandler(file_handler)
+    root_logger.addHandler(console_handler)
+
+    # Configure specific loggers
+    logging.getLogger("uvicorn").setLevel(logging.INFO)
+    logging.getLogger("sqlalchemy").setLevel(logging.WARNING)
+    logging.getLogger("langchain").setLevel(logging.INFO)
+
+    return root_logger
 
 # Create loggers for different components
-auth_logger = setup_logger("auth")
-document_logger = setup_logger("document")
-rag_logger = setup_logger("rag")
-api_logger = setup_logger("api")
+auth_logger = setup_logging()
+document_logger = setup_logging()
+rag_logger = setup_logging()
+api_logger = setup_logging()
 
 def log_api_request(logger: logging.Logger, request_info: dict):
     """

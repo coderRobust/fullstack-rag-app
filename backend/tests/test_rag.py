@@ -1,92 +1,133 @@
+"""
+Tests for RAG service.
+"""
 import pytest
 from unittest.mock import Mock, patch
 from services.rag import RAGService
-from models.document import Document
-from db.repositories.base import BaseRepository
+from core.exceptions import DocumentProcessingError, QuestionAnsweringError
+from db.repositories.document import DocumentRepository
+from db.repositories.embedding import EmbeddingRepository
 
 @pytest.fixture
-def rag_service(test_db):
-    document_repository = BaseRepository(Document)
-    return RAGService(document_repository)
+def mock_document_repository():
+    return Mock(spec=DocumentRepository)
 
-@pytest.mark.asyncio
-async def test_process_document(rag_service, test_db):
-    # Mock the FAISS vector store
-    with patch('services.rag.FAISS') as mock_faiss:
-        mock_faiss.from_texts.return_value = Mock()
-        mock_faiss.from_texts.return_value.save_local = Mock()
-        
-        # Test document processing
-        content = "This is a test document content."
-        metadata = {"filename": "test.txt"}
-        
-        document = await rag_service.process_document(content, metadata)
-        
-        assert document is not None
-        assert document.content == content
-        assert document.metadata == metadata
-        assert document.vector_store_path == f"faiss_index/{metadata['filename']}"
-        
-        # Verify FAISS was called correctly
-        mock_faiss.from_texts.assert_called_once()
-        mock_faiss.from_texts.return_value.save_local.assert_called_once()
+@pytest.fixture
+def mock_embedding_repository():
+    return Mock(spec=EmbeddingRepository)
 
-@pytest.mark.asyncio
-async def test_answer_question(rag_service, test_db):
-    # Mock the document repository and FAISS
-    with patch('services.rag.FAISS') as mock_faiss, \
-         patch.object(rag_service.document_repository, 'get') as mock_get:
-        
-        # Setup mocks
-        mock_document = Mock()
-        mock_document.vector_store_path = "test_path"
-        mock_get.return_value = mock_document
-        
-        mock_vectorstore = Mock()
-        mock_faiss.load_local.return_value = mock_vectorstore
-        mock_vectorstore.as_retriever.return_value = Mock()
-        
-        # Mock the QA chain
-        with patch('services.rag.RetrievalQA') as mock_qa:
-            mock_qa.from_chain_type.return_value = Mock()
-            mock_qa.from_chain_type.return_value.return_value = {"result": "Test answer"}
-            
-            # Test question answering
-            answer = await rag_service.answer_question("Test question?", 1)
-            
-            assert answer == "Test answer"
-            mock_get.assert_called_once_with(1)
-            mock_faiss.load_local.assert_called_once_with(
-                mock_document.vector_store_path,
-                rag_service.embeddings
-            )
+@pytest.fixture
+def rag_service(mock_document_repository, mock_embedding_repository):
+    return RAGService(
+        document_repository=mock_document_repository,
+        embedding_repository=mock_embedding_repository
+    )
 
-@pytest.mark.asyncio
-async def test_get_document_summary(rag_service, test_db):
-    # Mock the document repository and LLM
-    with patch.object(rag_service.document_repository, 'get') as mock_get, \
-         patch.object(rag_service.llm, 'agenerate') as mock_llm:
-        
-        # Setup mocks
-        mock_document = Mock()
-        mock_document.content = "Test content"
-        mock_get.return_value = mock_document
-        
-        mock_llm.return_value.generations = [[Mock(text="Test summary")]]
-        
-        # Test summary generation
-        summary = await rag_service.get_document_summary(1)
-        
-        assert summary == "Test summary"
-        mock_get.assert_called_once_with(1)
-        mock_llm.assert_called_once()
+def test_process_document_success(rag_service, mock_document_repository, mock_embedding_repository):
+    """Test successful document processing."""
+    # Arrange
+    content = "Test document content"
+    metadata = {"title": "Test Document"}
+    document_id = 1
+    
+    mock_document_repository.create.return_value = Mock(id=document_id)
+    mock_embedding_repository.create.return_value = Mock(id=1)
+    
+    # Act
+    result = rag_service.process_document(content, metadata)
+    
+    # Assert
+    assert result == document_id
+    mock_document_repository.create.assert_called_once()
+    assert mock_embedding_repository.create.call_count > 0
 
-@pytest.mark.asyncio
-async def test_answer_question_document_not_found(rag_service, test_db):
-    # Mock the document repository to return None
-    with patch.object(rag_service.document_repository, 'get') as mock_get:
-        mock_get.return_value = None
-        
-        # Test question answering with non-existent document
-        with pytest.raises(ValueError, match="Document not found"):
-            await rag_service.answer_question("Test question?", 999) 
+def test_process_document_error(rag_service, mock_document_repository):
+    """Test document processing error."""
+    # Arrange
+    content = "Test document content"
+    metadata = {"title": "Test Document"}
+    
+    mock_document_repository.create.side_effect = Exception("Database error")
+    
+    # Act & Assert
+    with pytest.raises(DocumentProcessingError):
+        rag_service.process_document(content, metadata)
+
+def test_answer_question_success(rag_service, mock_embedding_repository):
+    """Test successful question answering."""
+    # Arrange
+    question = "What is the test question?"
+    mock_embedding = Mock(
+        content="Test content",
+        embedding=[0.1, 0.2, 0.3],
+        document_id=1,
+        metadata={"chunk_index": 0}
+    )
+    mock_embedding_repository.get_all.return_value = [mock_embedding]
+    
+    # Act
+    with patch("services.rag.ChatOpenAI") as mock_llm:
+        mock_llm.return_value.predict.return_value = "Test answer"
+        result = rag_service.answer_question(question)
+    
+    # Assert
+    assert "answer" in result
+    assert "confidence" in result
+    assert "sources" in result
+    assert isinstance(result["sources"], list)
+
+def test_answer_question_no_documents(rag_service, mock_embedding_repository):
+    """Test question answering with no documents."""
+    # Arrange
+    question = "What is the test question?"
+    mock_embedding_repository.get_all.return_value = []
+    
+    # Act & Assert
+    with pytest.raises(QuestionAnsweringError):
+        rag_service.answer_question(question)
+
+def test_generate_summary_success(rag_service, mock_document_repository):
+    """Test successful summary generation."""
+    # Arrange
+    document_id = 1
+    mock_document = Mock(
+        id=document_id,
+        content="Test document content"
+    )
+    mock_document_repository.get.return_value = mock_document
+    
+    # Act
+    with patch("services.rag.ChatOpenAI") as mock_llm:
+        mock_llm.return_value.predict.return_value = "Test summary"
+        summary = rag_service.generate_summary(document_id)
+    
+    # Assert
+    assert isinstance(summary, str)
+    assert len(summary) > 0
+
+def test_generate_summary_document_not_found(rag_service, mock_document_repository):
+    """Test summary generation for non-existent document."""
+    # Arrange
+    document_id = 1
+    mock_document_repository.get.return_value = None
+    
+    # Act & Assert
+    with pytest.raises(DocumentProcessingError):
+        rag_service.generate_summary(document_id)
+
+def test_calculate_confidence(rag_service):
+    """Test confidence score calculation."""
+    # Arrange
+    result = {
+        "source_documents": [
+            Mock(metadata={"source": "1", "chunk_index": 0}),
+            Mock(metadata={"source": "1", "chunk_index": 1})
+        ]
+    }
+    
+    # Act
+    confidence = rag_service._calculate_confidence(result)
+    
+    # Assert
+    assert isinstance(confidence, float)
+    assert 0 <= confidence <= 1 
